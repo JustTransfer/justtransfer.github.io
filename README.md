@@ -30,45 +30,45 @@ JustTransfer utilizes the following cryptographic primitives:
 
 - `OPAQUE`: An asymmetric password-authenticated key exchange protocol that allows secure authentication without revealing the password to the server.
 - `Argon2`: A memory-hard password hashing function used to derive keys from passwords.
-- `X25519`, `XSalsa20` and `Poly1305`: A suite of cryptographic algorithms used to provide hybrid encryption. `X25519` is used for key exchange, `XSalsa20` for symmetric encryption, and `Poly1305` for the MAC.
+- `X25519`, `XSalsa20` and `Poly1305`: A suite of cryptographic algorithms used to provide hybrid encryption. `X25519` is used for key exchange, `XSalsa20` for symmetric encryption, and `Poly1305` for the MAC. This cipher suite is used to encrypt the filename and file in account transfer.
 - `Ed25519ph`: A digital signature scheme used for signing messages and verifying signatures to ensure authenticity and integrity.
-- `AEGIS-256`: An AEAD cipher used for encrypting and authenticating filenames and file metadata. TODO ??
-- `XSalsa20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption of keys and messages.
+- `AEGIS-256`: An AEAD cipher used for encrypting and authenticating filenames and file metadata (used to encrypt filename in link transfer).
+- `XSalsa20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption of keys and messages (used to encrypt private keys).
+- `XChacha20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption of keys and messages (used to encrypt chunk in link transfer).
 
 TODO explain what used for what
 
 ## OPAQUE Register
 
-The OPAQUE registration process
+The OPAQUE registration process consists of the following steps:
+
+1. The client initiates the OPAQUE registration by sending the username and the result of `OPAQUE_{ClientRegistration}` to the server.
 
 $$
-Client:
 client\_registration\_start\_result = OPAQUE_{ClientRegistration}(password)
 $$
 
+2. The server computes the OPAQUE registration start result using the username and the client's registration start result, and sends it back to the client.
+
 $$
-Server:
 server\_registration\_start\_result  = OPAQUE_{ServerRegistration}(username, client\_registration\_start\_result)
 $$
 
+3. The client computes the OPAQUE registration finish result using the password and the server's registration start result, which gives the export key.
+
 $$
-Client:
 client\_registration\_finish\_result = OPAQUE_{ClientRegistrationFinish}(password, server\_registration\_start\_result)
 $$
 
 $$
-Client:
-key = client\_registration\_finish\_result.export\_key
+export_key = client\_registration\_finish\_result.export\_key
 $$
 
-The client terminates the OPAQUE registration by sending the result of `OPAQUE_{ClientRegistrationFinish}` to the server and additional data, which depends on the mode used (link transfer or account transfer).
+4. The client sends the OPAQUE registration finish result to the server. The server computes the OPAQUE registration finish result, which gives the `password_file` that will be stored with username for future authentication. The client can also send other data to the server at this step, which depends on the type of registration (account or link).
 
 $$
-Server:
 password\_file  = OPAQUE_{ServerRegistrationFinish}(client\_registration\_finish\_result)
 $$
-
-The server stores the `password_file` associated with the username for future authentication.
 
 ### Message Flow Summary
 
@@ -90,36 +90,35 @@ TODO
 
 ## OPAQUE Login
 
-The process of OPAQUE login is as follows:
+The process of OPAQUE login
+
+1. The client initiates the OPAQUE login by sending the username and the result of `OPAQUE_{ClientLogin}` to the server.
 
 $$
-Client:
 client\_login\_start\_result = OPAQUE_{ClientLogin}(password)
 $$
 
-- The server retrieves the `password_file` associated with the username and uses it to compute the OPAQUE login start result, which is sent back to the client.
+2. The server computes the OPAQUE login start result using the username, the client's login start result, and the `password_file` stored for the username, and sends it back to the client.
 
 $$
-Server:
 server\_login\_start\_result  = OPAQUE_{ServerLogin}(username, client\_login\_start\_result, password\_file)
 $$
 
+3. The client computes the OPAQUE login finish result using the password and the server's login start result, which gives the export key.
+
 $$
-Client:
 client\_login\_finish\_result = OPAQUE_{ClientLoginFinish}(password, server\_login\_start\_result)
 $$
 
 $$
-Client:
-key = client\_login\_finish\_result.export\_key\_key
+export_key = client\_login\_finish\_result.export\_key\_key
 $$
 
+4. The client sends the OPAQUE login finish result to the server. The server computes the OPAQUE login finish result.
+
 $$
-Server:
 server\_login\_finish\_result = OPAQUE_{ServerLoginFinish}(client\_login\_finish\_result)
 $$
-
-TODO
 
 ### Message Flow Summary
 
@@ -142,6 +141,8 @@ export_key
 TODO
 
 ### Key Management
+
+TODO
 
 ### Nonce Management
 
