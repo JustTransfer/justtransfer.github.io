@@ -250,26 +250,91 @@ The following nonces are used in account transfer:
 - `nonce_filename`: A 192-bit nonce generated randomly for encrypting the filename.
 - `nonce_chunk`: A 192-bit nonce generated randomly for each chunk of the file.
 
+TODO nonce calculation and management
+
 ### Account Transfer Creation
 
-TODO
+To create an account transfer, the client performs the following steps:
+
+1. The client requests the server for the recipient's public keys using the recipient's username.
+2. The client encrypts the filename using the recipient's public encryption key.
+3. The client sends the following data to the server to create the transfer:
+
+- Sender's key ID, which is used to reference the sender's public signing key
+- Recipient's key ID, which is used to reference the recipient's keys
+- Encrypted filename and the nonce of the encrypted filename
+- Nonce of the message TODO ??
+- Max download times of the transfer
+- Lifetime of the transfer
+- Creation time of the transfer
+- The file size of the transfer
+
+4. The server stores the data and return the upload URLs to the client, which the client can use to upload the file in chunks.
+5. The client uploads the file in chunks to the upload URLs, and each chunk is encrypted using the recipient's public encryption key.
+6. The client terminates the transfer by sending the `etags` and the signature of the transfer to the server, which are used to finish the transfer upload.
 
 ### Account Transfer Access
 
-TODO
+To access an account transfer, the client performs the following steps:
+
+1. The client requests its received transfers from the server, and the server returns the metadata of the transfers, which includes the following data:
+
+- ID of the transfer
+- Sender's username
+- Sender's key ID
+- Recipient's username
+- Recipient's key ID
+- The encrypted filename
+- The nonce of the encrypted filename
+- The file ID of the transfer
+- The nonce of the message TODO ??
+- The max download times of the transfer
+- The lifetime of the transfer
+- The creation time of the transfer
+- The signature of the transfer
+- The current download times of the transfer
+- The file size of the transfer
+- The chunk size of the transfer
+
+2. The client requests a download URL from the server, which return a presigned URL for downloading the file.
+3. The client downloads the file in chunks using the download URL, and each chunk is decrypted using the recipient's private encryption key.
+4. The client verifies the signature of the transfer using the sender's public signing key to ensure the authenticity and integrity of the transfer.
 
 ### Account Change Password
 
-TODO
+To change the password of an account, the client performs the following steps:
+
+1. The client initiate an OPAQUE registration with the server using the new password. The private keys are encrypted using the new `export_key` derived from the new password, and the client sends the following data to the server at the end of the OPAQUE registration:
+
+- An array of keys, where each key contains the following data:
+  - ID of the key
+  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which are a key pair used for encrypt operations in account transfer.
+  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which are a key pair used for signing operations in account transfer.
+
+2. The server accepts to update the password file and the keys if the OPAQUE registration is successful and the user is authenticated with the old password. The server then updates the password file and the keys with the new data.
 
 ### Account Key Rotation
 
-TODO
+To rotate the keys of an account, the client performs the following steps:
+
+1. The client generates new key pairs for encryption and signing, and encrypts the private keys using the `export_key` derived from the current password.
+2. The client sends the new keys to the server, which adds the new keys to the account and mark the old keys as revoked. The server also stores the time of the key revocation.
+3. The server deletes the old keys if the keys are revoked and not used in any other transfer.
 
 ### Account Recovery
 
-TODO
+To recover an account, the client performs the following steps:
+
+1. The client submits an account recovery request to the server, which includes the email associated with the account.
+2. The server sends a recovery email to the email address, which contains a recovery link with a unique token.
+3. The client clicks the recovery link, which directs them to a password reset page where they can enter a new password.
+4. The client initiates an OPAQUE registration with the server using the new password.
+5. The server accepts to reset the password if the OPAQUE registration is successful and the token is valid. The server then updates the password file and revoke the reset token to prevent reuse.
+6. The server deletes all other keys and transfers associated with the account, as it is assumed that the password is lost so the client will not be able to decrypt them anymore.
 
 ### Account Deletion
 
-TODO
+To delete an account, the client performs the following steps:
+
+1. The client sends an account deletion request to the server.
+2. The server deletes all data associated with the account, including the user, keys, sended and received transfers, and any other related data.
