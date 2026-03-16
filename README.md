@@ -22,7 +22,7 @@ The following key sizes and parameters are used in JustTransfer:
 - Asymmetric Key Size: 512 bits for elliptic curve cryptography (ECC)
 - Hash Function Output Size: 512 bits
 
-TODO check with current implem
+TODO check with current implementation
 
 ## Cryptographic Primitives
 
@@ -54,7 +54,7 @@ $$
 server\_registration\_start\_result  = OPAQUE_{ServerRegistration}(username, client\_registration\_start\_result)
 $$
 
-3. The client computes the OPAQUE registration finish result using the password and the server's registration start result, which gives the export key.
+3. The client computes the OPAQUE registration finish result using the password and the server's registration start result, which produces the export key.
 
 $$
 client\_registration\_finish\_result = OPAQUE_{ClientRegistrationFinish}(password, server\_registration\_start\_result)
@@ -64,7 +64,7 @@ $$
 export_key = client\_registration\_finish\_result.export\_key
 $$
 
-4. The client sends the OPAQUE registration finish result to the server. The server computes the OPAQUE registration finish result, which gives the `password_file` that will be stored with username for future authentication. The client can also send other data to the server at this step, which depends on the type of registration (account or link).
+4. The client sends the OPAQUE registration finish result to the server. The server computes the OPAQUE registration finish result, which produces the `password_file` that will be stored with username for future authentication. The client can also send other data to the server at this step, which depends on the type of registration (account or link).
 
 $$
 password\_file  = OPAQUE_{ServerRegistrationFinish}(client\_registration\_finish\_result)
@@ -90,7 +90,7 @@ TODO
 
 ## OPAQUE Login
 
-The process of OPAQUE login
+The OPAQUE login process consists of the following steps:
 
 1. The client initiates the OPAQUE login by sending the username and the result of `OPAQUE_{ClientLogin}` to the server.
 
@@ -98,13 +98,13 @@ $$
 client\_login\_start\_result = OPAQUE_{ClientLogin}(password)
 $$
 
-2. The server computes the OPAQUE login start result using the username, the client's login start result, and the `password_file` stored for the username, and sends it back to the client.
+2. The server computes the OPAQUE login start result using the username, the client's login start result, and the `password_file` stored for the username and sends it back to the client.
 
 $$
 server\_login\_start\_result  = OPAQUE_{ServerLogin}(username, client\_login\_start\_result, password\_file)
 $$
 
-3. The client computes the OPAQUE login finish result using the password and the server's login start result, which gives the export key.
+3. The client computes the OPAQUE login finish result using the password and the server's login start result, which produces the export key.
 
 $$
 client\_login\_finish\_result = OPAQUE_{ClientLoginFinish}(password, server\_login\_start\_result)
@@ -138,13 +138,13 @@ export_key
 
 ## Link Transfer
 
-The link transfer allows a user to share a file to other users by creating a link. As link transfer does not require the user to have an account, the transfer are repudiable and the security relies on the secrecy of the password used in the OPAQUE registration.
+The link transfer allows a user to share a file with other users by creating a link. As link transfer does not require the user to have an account, the transfers are repudiable, and the security relies on the secrecy of the password used in the OPAQUE registration.
 
 ### Link Transfer Creation
 
 To create a link transfer, the client performs the following steps:
 
-1. The client performs a OPAQUE registration with the server, and sends the following data to the server at the end of the OPAQUE registration:
+1. The client performs an OPAQUE registration with the server, and sends the following data to the server at the end of the OPAQUE registration:
 
 - ID of the transfer, which is provided by the server with the server registration start result
 - The encrypted filename, which is encrypted using TODO
@@ -152,10 +152,10 @@ To create a link transfer, the client performs the following steps:
 - Header, which is used to encrypt the file.
 - Max download times of the transfer
 - Lifetime of the transfer
-- Creation time of the transfer
+- Transfer creation time
 - The file size of the transfer
 
-2. The server stores the data and return the upload URLs to the client, which the client can use to upload the file in chunks.
+2. The server stores the data and returns the upload URLs to the client, which the client can use to upload the file in chunks.
 3. The client uploads the file in chunks to the upload URLs, and each chunk is encrypted using TODO.
 4. The client terminates the transfer by sending the `etags` of the chunks to the server, which are used to finish the transfer upload.
 5. The client displays the link to the user, using the transfer ID.
@@ -164,7 +164,7 @@ To create a link transfer, the client performs the following steps:
 
 To access a link transfer, the client performs the following steps:
 
-1. The client performs a OPAQUE login with the server, using the ID of the transfer as the username.
+1. The client performs an OPAQUE login with the server, using the transfer ID as the username.
 2. The client requests the transfer metadata from the server, which includes the following data:
 
 - ID of the transfer
@@ -174,18 +174,18 @@ To access a link transfer, the client performs the following steps:
 - The header of the transfer
 - The max download times of the transfer
 - The lifetime of the transfer
-- The creation time of the transfer
+- The transfer creation time
 - The current download times of the transfer
 - The file size of the transfer
 - The chunk size of the transfer
 
 3. The client decrypts the filename using the encrypted filename and the nonce.
-4. The client requests a download URL from the server, which return a presigned URL for downloading the file.
+4. The client requests a download URL from the server, which returns a pre-signed URL for downloading the file.
 5. The client downloads the file in chunks using the download URL, and each chunk is decrypted using TODO.
 
 ### Key Management
 
-The keys used in link transfer are obtained as follows:
+The keys used in link transfers are obtained as follows:
 
 1. The `export_key` is obtained from a successful OPAQUE registration or login, which is a 512-bit key.
 2. `key_filename` is obtained using the first 256 bits of the `export_key`
@@ -202,37 +202,37 @@ TODO nonce calculation and management
 
 ## Account Transfer
 
-The account transfer allows a user to send a file to another user. The transfer is non-repudiable as the sender signs the transfer. The security of the transfer relies on the security of the account, which allows to avoid one password per transfer as in link transfer.
+The account transfer allows a user to send files to other users. The transfer is non-repudiable as the sender signs the transfer. The security of the transfer relies on the security of the account, which avoids requiring one password per transfer and allows users to manage their transfers and keys in one place.
 
 ### Account Creation
 
 To create an account, the client performs the following steps:
 
-1. The client performs a OPAQUE registration with the server, and sends the following data to the server at the end of the OPAQUE registration:
+1. The client performs an OPAQUE registration with the server, and sends the following data to the server at the end of the OPAQUE registration:
 
 - Username
 - Email
-- `cpriv_enc`, `nonce_priv_enc` and `pub_enc`, which are a key pair used for encrypt operations in account transfer. `cpriv_enc` is the encrypted private key using `export_key` with `nonce_priv_enc` as the nonce, and `pub_enc` is the public key. The key pair is randomly generated by the client, and the private key is encrypted to ensure that only the client can access it.
-- `cpriv_sign`, `nonce_priv_sign` and `pub_sign`, which are a key pair used for signing operations in account transfer. `cpriv_sign` is the encrypted private key using `export_key` with `nonce_priv_sign` as the nonce, and `pub_sign` is the public key. The key pair is randomly generated by the client, and the private key is encrypted to ensure that only the client can access it.
+- `cpriv_enc`, `nonce_priv_enc` and `pub_enc`, which is a key pair used for encrypting operations in account transfer. `cpriv_enc` is the encrypted private key using `export_key` with `nonce_priv_enc` as the nonce, and `pub_enc` is the public key. The key pair is randomly generated by the client, and the private key is encrypted to ensure that only the client can access it.
+- `cpriv_sign`, `nonce_priv_sign` and `pub_sign`, which is a key pair used for signing operations in account transfer. `cpriv_sign` is the encrypted private key using `export_key` with `nonce_priv_sign` as the nonce, and `pub_sign` is the public key. The key pair is randomly generated by the client, and the private key is encrypted to ensure that only the client can access it.
 
 ### Account Login
 
-The account login process is the same as the OPAQUE login process, which gives the `export_key` to the client. At the end of the OPAQUE login, the server also sends the following data to the client:
+The account login process is the same as the OPAQUE login process, which produces the `export_key` to the client. At the end of the OPAQUE login, the server also sends the following data to the client:
 
 - Role of the user (e.g., user, premium, etc.)
 - An array of keys, where each key contains the following data:
   - ID of the key
-  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which are a key pair used for encrypt operations in account transfer.
-  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which are a key pair used for signing operations in account transfer.
+  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in account transfer.
+  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in account transfer.
   - If the key is active or not
   - The time of the key creation
   - The time of the key revocation (if the key is revoked)
 
-The client can then decrypt the private keys using the `export_key` and the nonces, and use the key pairs for account transfer operations.
+The client can then decrypt the private keys using the `export_key` and the nonces and use the key pairs for account transfer operations.
 
 ### Key Management
 
-The keys used in account transfer are obtained as follows:
+The keys used in account transfers are obtained as follows:
 
 1. The `export_key` is obtained from a successful OPAQUE registration or login, which is a 512-bit key.
 2. `key_enc` is obtained using the first 256 bits of the `export_key` and is used to encrypt the private key.
@@ -266,12 +266,12 @@ To create an account transfer, the client performs the following steps:
 - Nonce of the message TODO ??
 - Max download times of the transfer
 - Lifetime of the transfer
-- Creation time of the transfer
+- Transfer creation time
 - The file size of the transfer
 
-4. The server stores the data and return the upload URLs to the client, which the client can use to upload the file in chunks.
+4. The server stores the data and returns the upload URLs to the client, which the client can use to upload the file in chunks.
 5. The client uploads the file in chunks to the upload URLs, and each chunk is encrypted using the recipient's public encryption key.
-6. The client terminates the transfer by sending the `etags` and the signature of the transfer to the server, which are used to finish the transfer upload.
+6. The client terminates the transfer by sending the `etags` and the signature of the transfer to the server, which are used to finalize the transfer upload.
 
 ### Account Transfer Access
 
@@ -290,13 +290,13 @@ To access an account transfer, the client performs the following steps:
 - The nonce of the message TODO ??
 - The max download times of the transfer
 - The lifetime of the transfer
-- The creation time of the transfer
+- The transfer creation time
 - The signature of the transfer
 - The current download times of the transfer
 - The file size of the transfer
 - The chunk size of the transfer
 
-2. The client requests a download URL from the server, which return a presigned URL for downloading the file.
+2. The client requests a download URL from the server, which returns a pre-signed URL for downloading the file.
 3. The client downloads the file in chunks using the download URL, and each chunk is decrypted using the recipient's private encryption key.
 4. The client verifies the signature of the transfer using the sender's public signing key to ensure the authenticity and integrity of the transfer.
 
@@ -304,14 +304,14 @@ To access an account transfer, the client performs the following steps:
 
 To change the password of an account, the client performs the following steps:
 
-1. The client initiate an OPAQUE registration with the server using the new password. The private keys are encrypted using the new `export_key` derived from the new password, and the client sends the following data to the server at the end of the OPAQUE registration:
+1. The client initiates an OPAQUE registration with the server using the new password. The private keys are encrypted using the new `export_key` derived from the new password, and the client sends the following data to the server at the end of the OPAQUE registration:
 
 - An array of keys, where each key contains the following data:
   - ID of the key
-  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which are a key pair used for encrypt operations in account transfer.
-  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which are a key pair used for signing operations in account transfer.
+  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in account transfer.
+  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in account transfer.
 
-2. The server accepts to update the password file and the keys if the OPAQUE registration is successful and the user is authenticated with the old password. The server then updates the password file and the keys with the new data.
+2. The server accepts updating the password file and the keys if the OPAQUE registration is successful, and the user is authenticated with the old password. The server then updates the password file and the keys with the new data.
 
 ### Account Key Rotation
 
@@ -319,7 +319,7 @@ To rotate the keys of an account, the client performs the following steps:
 
 1. The client generates new key pairs for encryption and signing, and encrypts the private keys using the `export_key` derived from the current password.
 2. The client sends the new keys to the server, which adds the new keys to the account and mark the old keys as revoked. The server also stores the time of the key revocation.
-3. The server deletes the old keys if the keys are revoked and not used in any other transfer.
+3. The server deletes the old keys if they are revoked and not used in any other transfer.
 
 ### Account Recovery
 
@@ -327,14 +327,14 @@ To recover an account, the client performs the following steps:
 
 1. The client submits an account recovery request to the server, which includes the email associated with the account.
 2. The server sends a recovery email to the email address, which contains a recovery link with a unique token.
-3. The client clicks the recovery link, which directs them to a password reset page where they can enter a new password.
+3. The client clicks on the recovery link, which directs them to a password reset page where they can enter a new password.
 4. The client initiates an OPAQUE registration with the server using the new password.
-5. The server accepts to reset the password if the OPAQUE registration is successful and the token is valid. The server then updates the password file and revoke the reset token to prevent reuse.
-6. The server deletes all other keys and transfers associated with the account, as it is assumed that the password is lost so the client will not be able to decrypt them anymore.
+5. The server accepts to reset the password if the OPAQUE registration is successful and the token is valid. The server then updates the password file and revokes the reset token to prevent reuse.
+6. The server deletes all other keys and transfers associated with the account, as it is assumed that the password is lost, so the client will not be able to decrypt them anymore.
 
 ### Account Deletion
 
 To delete an account, the client performs the following steps:
 
 1. The client sends an account deletion request to the server.
-2. The server deletes all data associated with the account, including the user, keys, sended and received transfers, and any other related data.
+2. The server deletes all data associated with the account, including the user, keys, sent and received transfers, and any other related data.
