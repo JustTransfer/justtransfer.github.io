@@ -2,6 +2,10 @@
 
 This page describes the security design of JustTransfer, which aims to provide an end-to-end secure account and link transfer service for large files.
 
+## Table of Contents
+
+TODO
+
 ## Threat Model
 
 The threat model of JustTransfer includes the following assumptions:
