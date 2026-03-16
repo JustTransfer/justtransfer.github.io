@@ -4,7 +4,13 @@ This page describes the security design of JustTransfer, which aims to provide a
 
 ## Table of Contents
 
-TODO
+- [Threat Model](#threat-model)
+- [Security Level](#security-level)
+- [Cryptographic Primitives](#cryptographic-primitives)
+- [OPAQUE Register](#opaque-register)
+- [OPAQUE Login](#opaque-login)
+- [Link Transfer](#link-transfer)
+- [Account Transfer](#account-transfer)
 
 ## Threat Model
 
