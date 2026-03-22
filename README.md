@@ -135,6 +135,8 @@ The following nonces are used in link transfer:
 
 As a new key is generated for each new link transfer, there is no risk of nonce reuse across different transfers. For the chunk encryption within the same transfer, the `header` is used as the nonce, and rekeying is automatically performed by Libsodium if the counter exceeds the limit.
 
+---
+
 ## Account Transfer
 
 The account transfer allows a user to send files to other users. The transfer is non-repudiable as the sender signs the transfer. The security of the transfer relies on the security of the account, which avoids requiring one password per transfer and allows users to manage their transfers and keys in one place.
