@@ -27,8 +27,6 @@ The following key sizes and parameters are used in JustTransfer:
 - Asymmetric Key Size: 512 bits for elliptic curve cryptography (ECC)
 - Hash Function Output Size: 512 bits
 
-TODO check with current implementation
-
 ## Cryptographic Primitives
 
 JustTransfer utilizes the following cryptographic primitives:
@@ -39,15 +37,24 @@ JustTransfer utilizes the following cryptographic primitives:
 The following cryptographic primitives are used in Link Transfer:
 
 - `AEGIS-256`: An AEAD cipher used for encrypting and authenticating filenames and file metadata in link transfer.
-- `XChacha20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption (used to encrypt chunk in link transfer).
+  - Key size: 256 bits
+  - Nonce size: 256 bits
+- `XChacha20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption, used to encrypt file chunks in link transfer.
+  - Key size: 256 bits
+  - Header size (nonce): 192 bits
 
 The following cryptographic primitives are used in Account Transfer:
 
-- `XSalsa20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption (used to encrypt private keys).
-- `X25519`, `XSalsa20` and `Poly1305`: A suite of cryptographic algorithms used to provide hybrid encryption. `X25519` is used for key exchange, `XSalsa20` for symmetric encryption, and `Poly1305` for the MAC. This cipher suite is used to encrypt the filename and file in account transfer.
+- `XSalsa20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption, used to encrypt the private keys of an account.
+  - Key size: 256 bits
+  - Nonce size: 192 bits
+- `X25519`, `XSalsa20` and `Poly1305`: A suite of cryptographic algorithms used to provide hybrid encryption, used to encrypt the filename and file chunks in account transfer.
+  - Public key size: 256 bits
+  - Private key size: 256 bits
+  - Nonce size: 192 bits
 - `Ed25519ph`: A digital signature scheme used for signing messages and verifying signatures to ensure authenticity and integrity.
-
-TODO explain what used for what
+  - Public key size: 256 bits
+  - Private key size: 512 bits
 
 ## Link Transfer
 
@@ -255,7 +262,6 @@ To access an account transfer, the client performs the following steps:
 - The encrypted filename
 - The nonce of the encrypted filename
 - The file ID of the transfer
-- The nonce of the message TODO ??
 - The max download times of the transfer
 - The lifetime of the transfer
 - The transfer creation time
@@ -346,7 +352,7 @@ $$
 export_key = client\_registration\_finish\_result.export\_key
 $$
 
-4. The client sends the OPAQUE registration finish result to the server. The server computes the OPAQUE registration finish result, which produces the `password_file` that will be stored with username for future authentication. The client can also send other data to the server at this step, which depends on the type of registration (account or link).
+4. The client sends the OPAQUE registration finish result to the server. The server computes the OPAQUE registration finish result, which produces the `password_file` that will be stored with username for future authentication. The client can also send other data to the server at this step, which depends on the type of registration (account registration or link registration).
 
 $$
 password\_file  = OPAQUE_{ServerRegistrationFinish}(client\_registration\_finish\_result)
@@ -367,8 +373,6 @@ $$
     ▼
 export_key
 ```
-
-TODO
 
 ### OPAQUE Login
 
@@ -396,7 +400,7 @@ $$
 export_key = client\_login\_finish\_result.export\_key\_key
 $$
 
-4. The client sends the OPAQUE login finish result to the server. The server computes the OPAQUE login finish result.
+4. The client sends the OPAQUE login finish result to the server. The server computes the OPAQUE login finish result and returns various data to the client, which depends on the type of login (account login or link login).
 
 $$
 server\_login\_finish\_result = OPAQUE_{ServerLoginFinish}(client\_login\_finish\_result)
