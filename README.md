@@ -29,7 +29,7 @@ The following key sizes and parameters are used in JustTransfer:
 
 - Symmetric Key Size: 256 bits
 - Asymmetric Key Size: 512 bits for elliptic curve cryptography (ECC)
-- Hash Function Output Size: 512 bits
+- Hash Function Output Size: 256 bits
 
 ---
 
@@ -54,7 +54,7 @@ The following cryptographic primitives are used in Account Transfer:
 - `XSalsa20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption, used to encrypt the private keys of an account.
   - Key size: 256 bits
   - Nonce size: 192 bits
-- `X25519`, `XSalsa20` and `Poly1305`: A suite of cryptographic algorithms used to provide hybrid encryption, used to encrypt the filename and file chunks in account transfer.
+- `X25519`, `XSalsa20` and `Poly1305`: A suite of cryptographic algorithms used to provide hybrid encryption, used to encrypt filename and file chunks in account transfer.
   - Public key size: 256 bits
   - Private key size: 256 bits
   - Nonce size: 192 bits
@@ -86,11 +86,13 @@ To create a link transfer, the client performs the following steps:
    - Transfer creation time
    - The file size of the transfer
 
-6. The server stores the data and returns the upload URLs to the client, which the client can use to upload the file in chunks.
+6. The server stores the data and returns the upload-URLs to the client, which the client can use to upload the file in chunks.
 7. The client encrypts each chunk of the file using XChacha20-Poly1305 with `key_file` and `header` as the nonce (random).
-8. The client uploads the encrypted chunks to the upload URLs.
+8. The client uploads the encrypted chunks to the upload-URLs.
 9. The client terminates the transfer by sending the `etags` of the chunks to the server, which are used to finish the transfer upload.
 10. The client displays the link to the user, using the transfer ID.
+
+> Note: As the `header` is included in the authenticated data of the filename encryption, any modification or swapping of chunks will be detected as the integrity verification of the chunks will fail.
 
 ### Link Transfer Access
 
@@ -112,7 +114,7 @@ To access a link transfer, the client performs the following steps:
    - The file size of the transfer
    - The chunk size of the transfer
 
-5. The client decrypts the filename using AEGIS-256 with `key_metadata` and `nonce_filename`, and verifies the integrity of the metadata using the authenticated data.
+5. The client decrypts the filename using AEGIS-256 with `key_metadata` and `nonce_filename`. It then verifies the integrity of the metadata using the authenticated data.
 6. The client requests the download URLs from the server, which returns pre-signed URLs for downloading the file in chunks.
 7. The client downloads the encrypted chunks using the download URLs, and decrypts each chunk using XChacha20-Poly1305 with `key_file` and `header` as the nonce.
 8. The client verifies the integrity of each chunk using the MAC provided by XChacha20-Poly1305.
@@ -123,7 +125,7 @@ To access a link transfer, the client performs the following steps:
 The keys used in link transfers are obtained as follows:
 
 1. The `export_key` is obtained from a successful OPAQUE registration or login, which is a 512-bit key.
-2. `key_filename` is obtained using the first 256 bits of the `export_key`
+2. `key_metadata` is obtained using the first 256 bits of the `export_key`
 3. `key_file` is obtained using the last 256 bits of the `export_key`
 
 ### Nonce Management
@@ -246,7 +248,7 @@ To create an account transfer, the client performs the following steps:
    - Transfer creation time
    - The file size of the transfer
 
-5. The server stores the data and returns the upload URLs to the client.
+5. The server stores the data and returns the upload-URLs to the client.
 6. The client splits the file into chunks and performs the following steps for each chunk:
    - Generate a random nonce `nonce_chunk` for encrypting the chunk.
    - Encrypt the chunk using the `X25519-XSalsa20-Poly1305` cipher suite and the following keys:
@@ -255,7 +257,7 @@ To create an account transfer, the client performs the following steps:
    - Append the `nonce_chunk` to the encrypted chunk at the beginning, which will be used for decryption later.
    - Update the signature of the transfer using the sender's private signing key and the content of the current chunk.
 
-7. The client uploads the encrypted chunks to the upload URLs.
+7. The client uploads the encrypted chunks to the upload-URLs.
 8. The client terminates the transfer by sending the `etags` and the signature of the transfer to the server, which are used to finalize the transfer upload.
 
 ### Account Transfer Access
@@ -280,7 +282,7 @@ To access an account transfer, the client performs the following steps:
 - The file size of the transfer
 - The chunk size of the transfer
 
-2. The client initiallize the signature verification of the transfer using the metadata of the transfer.
+2. The client initializes the signature verification of the transfer using the metadata of the transfer.
 3. The client decrypts and verify the integrity and authenticity of the filename using the `X25519-XSalsa20-Poly1305` cipher suite and the following keys:
    - Recipient's private encryption key
    - Sender's public encryption key
@@ -312,8 +314,8 @@ To change the password of an account, the client performs the following steps:
 
 To rotate the keys of an account, the client performs the following steps:
 
-1. The client generates two new key pairs for encryption and signing, and encrypts the private keys using the `key_enc`. The new keys and nonces are randomly generated.
-2. The client sends the new keys to the server, which adds the new keys to the account and mark the old keys as revoked. The server also stores the time of the key revocation.
+1. The client generates two new key pairs for encryption and signing. The client encrypts both private keys using the `key_enc`. The new keys and nonces are randomly generated.
+2. The client sends the new keys to the server, which adds the new keys to the account and marks the old keys as revoked. The server also stores the time of the key revocation.
 3. The server deletes the old keys if they are revoked and not used in any other transfer.
 
 ### Account Recovery
@@ -324,7 +326,7 @@ To recover an account, the client performs the following steps:
 2. The server sends a recovery email to the email address, which contains a recovery link with a unique token.
 3. The client clicks on the recovery link, which directs them to a password reset page where they can enter a new password.
 4. The client initiates an OPAQUE registration with the server using the new password.
-5. The server accepts to reset the password if the OPAQUE registration is successful and the reset token is valid. The server then updates the password file and revokes the reset token to prevent reuse.
+5. The server accepts to reset the password if the OPAQUE registration is successful, and the reset token is valid. The server then updates the password file and revokes the reset token to prevent reuse.
 6. The server deletes all other keys and transfers associated with the account, as it is assumed that the password is lost, so the client will not be able to decrypt them anymore.
 
 ### Account Deletion
