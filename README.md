@@ -11,6 +11,8 @@ This page describes the security design of JustTransfer, which aims to provide a
 - [Account Transfer](#account-transfer)
 - [Annex](#annex)
 
+---
+
 ## Threat Model
 
 The threat model of JustTransfer includes the following assumptions:
@@ -19,6 +21,8 @@ The threat model of JustTransfer includes the following assumptions:
 - Server honest-but-curious: The server is assumed to be honest in following the protocol but may try to learn sensitive information from the data it processes. It will not intentionally deviate from the protocol but may attempt to analyze the data for insights.
 - Client-side Security: The client is responsible for securely handling sensitive information, such as passwords and cryptographic keys. The client is assumed to be secure and not compromised by malware or other attacks.
 
+---
+
 ## Security Level
 
 The following key sizes and parameters are used in JustTransfer:
@@ -26,6 +30,8 @@ The following key sizes and parameters are used in JustTransfer:
 - Symmetric Key Size: 256 bits
 - Asymmetric Key Size: 512 bits for elliptic curve cryptography (ECC)
 - Hash Function Output Size: 512 bits
+
+---
 
 ## Cryptographic Primitives
 
@@ -55,6 +61,8 @@ The following cryptographic primitives are used in Account Transfer:
 - `Ed25519ph`: A digital signature scheme used for signing messages and verifying signatures to ensure authenticity and integrity.
   - Public key size: 256 bits
   - Private key size: 512 bits
+
+---
 
 ## Link Transfer
 
@@ -190,7 +198,7 @@ $$
 Where `n` is the number of chunks and `d` is the number of possible nonces (which is $2^{192}$ for a 192-bit nonce). Solving for `n` gives us:
 
 $$
-n = 2^{80}
+n \approx 2^{80}
 $$
 
 This means that up to $2^{80}$ chunks can be securely encrypted with the same key and randomly generated nonce before the probability of a nonce collision becomes significant (greater than $2^{-32}$).
@@ -323,6 +331,8 @@ To delete an account, the client performs the following steps:
 
 1. The client sends an account deletion request to the server.
 2. The server deletes all data associated with the account, including the user, keys, sent and received transfers, and any other related data.
+
+---
 
 ## Annex
 
