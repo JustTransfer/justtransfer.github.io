@@ -154,6 +154,24 @@ The following nonces are used in link transfer:
 
 As a new key is generated for each new link transfer, there is no risk of nonce reuse across different transfers. For the chunk encryption within the same transfer, the `header` is used as the nonce, and rekeying is automatically performed by Libsodium if the counter exceeds the limit.
 
+### Data Storage
+
+The following data are stored **unencrypted** in the server for each link transfer:
+
+- ID of the transfer
+- The nonce of the encrypted filename
+- Header of the transfer
+- Max download times of the transfer
+- Lifetime of the transfer
+- Transfer creation time
+- The file size of the transfer
+- The chunk size of the transfer
+
+The following data are stored **encrypted** in the server for each link transfer:
+
+- The encrypted filename
+- The file chunks
+
 ---
 
 ## Account Transfer
@@ -232,6 +250,41 @@ sizeLimit = 2^{80} \times chunkSize \approx 1.2 \times 10^{22} \text{ GB}
 $$
 
 As this limit is extremely large and practically unreachable, we can safely assume that nonce reuse will not occur in account transfer under normal usage.
+
+### Data Storage
+
+For each account, the server stores the following data:
+
+- Username
+- Email
+- An array of keys, where each key contains the following data:
+  - ID of the key
+  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in account transfer.
+  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in account transfer.
+  - If the key is active or not
+  - The time of the key creation
+  - The time of the key revocation (if the key is revoked)
+
+For each account transfer, the server stores the following data **unencrypted**:
+
+- ID of the transfer
+- Sender's username
+- Sender's key ID, which is used to reference the sender's public signing key
+- Recipient's username
+- Recipient's key ID, which is used to reference the recipient's keys
+- The nonce of the encrypted filename
+- The file ID of the transfer
+- The max download times of the transfer
+- The lifetime of the transfer
+- The transfer creation time
+- The current download times of the transfer
+- The file size of the transfer
+- The chunk size of the transfer
+
+The server also stores the following data **encrypted** for each account transfer:
+
+- The encrypted filename
+- The file chunks
 
 ### Account Transfer Creation
 
