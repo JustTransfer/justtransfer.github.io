@@ -364,7 +364,7 @@ client\_registration\_finish\_result = OPAQUE_{ClientRegistrationFinish}(passwor
 $$
 
 $$
-export_key = client\_registration\_finish\_result.export\_key
+export\_key = client\_registration\_finish\_result.export\_key
 $$
 
 4. The client sends the OPAQUE registration finish result to the server. The server computes the OPAQUE registration finish result, which produces the `password_file` that will be stored with username for future authentication. The client can also send other data to the server at this step, which depends on the type of registration (account registration or link registration).
@@ -412,7 +412,7 @@ client\_login\_finish\_result = OPAQUE_{ClientLoginFinish}(password, server\_log
 $$
 
 $$
-export_key = client\_login\_finish\_result.export\_key\_key
+export\_key = client\_login\_finish\_result.export\_key\_key
 $$
 
 4. The client sends the OPAQUE login finish result to the server. The server computes the OPAQUE login finish result and returns various data to the client, which depends on the type of login (account login or link login).
