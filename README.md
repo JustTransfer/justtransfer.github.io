@@ -7,6 +7,7 @@ This page describes the security design of JustTransfer, which aims to provide a
 - [Threat Model](#threat-model)
 - [Security Level](#security-level)
 - [Cryptographic Primitives](#cryptographic-primitives)
+- [Link Transfer vs Account Transfer](#link-transfer-vs-account-transfer)
 - [Link Transfer](#link-transfer)
 - [Account Transfer](#account-transfer)
 - [Annex](#annex)
@@ -61,6 +62,20 @@ The following cryptographic primitives are used in Account Transfer:
 - `Ed25519ph`: A digital signature scheme used for signing messages and verifying signatures to ensure authenticity and integrity.
   - Public key size: 256 bits
   - Private key size: 512 bits
+
+---
+
+### Link Transfer vs Account Transfer
+
+The following table summarizes the differences between link transfer and account transfer in JustTransfer:
+
+| Feature          | Link Transfer                            | Account Transfer                                                  |
+| ---------------- | ---------------------------------------- | ----------------------------------------------------------------- |
+| Authentication   | One password for each transfer           | One password for the account, which can manage multiple transfers |
+| Repudiation      | Yes                                      | No (transfers are signed by the sender)                           |
+| Forward Secrecy  | Yes                                      | Yes (on key rotation)                                             |
+| Backward Secrecy | Yes                                      | Yes (on key rotation)                                             |
+| Limits           | Limited (size, lifetime, download times) | Higher limits (depends on the account)                            |
 
 ---
 
