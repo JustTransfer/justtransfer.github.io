@@ -419,6 +419,8 @@ To rotate the keys of an account, the client performs the following steps:
 2. The client sends the new keys to the server, which adds the new keys to the account and marks the old keys as revoked. The server also stores the time of the key revocation.
 3. The server deletes the old keys if they are revoked and not used in any other transfer.
 
+> Note: Key rotation does not need to be performed frequently as the maximum number of messages that can be securely encrypted with the same key and randomly generated nonce is extremely large. However, if the user suspects that their keys may be compromised, they can perform a key rotation to ensure the security of their new transfers.
+
 ### Account Recovery
 
 The account recovery allows the user to recover access to their account if they forget their password. The recovery process involves sending a recovery email to the user's registered email address, which contains a recovery link with a unique token. The user can then click on the recovery link to reset their password and regain access to their account. As the password is lost, the keys of the account are considered lost as well, so all existing keys and transfers are deleted to ensure consistency of the account state. The process of creating new keys are automatically performed by the client when resetting the password.
