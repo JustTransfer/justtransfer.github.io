@@ -7,9 +7,28 @@ This page describes the security design of JustTransfer, which aims to provide a
 - [Threat Model](#threat-model)
 - [Security Level](#security-level)
 - [Cryptographic Primitives](#cryptographic-primitives)
+- [Link Transfer vs Account Transfer](#link-transfer-vs-account-transfer)
 - [Link Transfer](#link-transfer)
+  - [Link Transfer Creation](#link-transfer-creation)
+  - [Link Transfer Access](#link-transfer-access)
+  - [Key Management](#key-management)
+  - [Nonce Management](#nonce-management)
+  - [Data Storage](#data-storage)
 - [Account Transfer](#account-transfer)
+  - [Account Creation](#account-creation)
+  - [Account Login](#account-login)
+  - [Key Management](#key-management-1)
+  - [Nonce Management](#nonce-management-1)
+  - [Data Storage](#data-storage-1)
+  - [Account Transfer Creation](#account-transfer-creation)
+  - [Account Transfer Access](#account-transfer-access)
+  - [Account Change Password](#account-change-password)
+  - [Account Key Rotation](#account-key-rotation)
+  - [Account Recovery](#account-recovery)
+  - [Account Deletion](#account-deletion)
 - [Annex](#annex)
+  - [OPAQUE Register](#opaque-register)
+  - [OPAQUE Login](#opaque-login)
 
 ---
 
@@ -64,11 +83,27 @@ The following cryptographic primitives are used in Account Transfer:
 
 ---
 
+### Link Transfer vs Account Transfer
+
+The following table summarizes the differences between link transfer and account transfer in JustTransfer:
+
+| Feature          | Link Transfer                            | Account Transfer                                                  |
+| ---------------- | ---------------------------------------- | ----------------------------------------------------------------- |
+| Authentication   | One password for each transfer           | One password for the account, which can manage multiple transfers |
+| Repudiation      | Yes                                      | No (transfers are signed by the sender)                           |
+| Forward Secrecy  | Yes                                      | Yes (on key rotation)                                             |
+| Backward Secrecy | Yes                                      | Yes (on key rotation)                                             |
+| Limits           | Limited (size, lifetime, download times) | Higher limits (depends on the account)                            |
+
+---
+
 ## Link Transfer
 
 The link transfer allows a user to share a file with other users by creating a link. As link transfer does not require the user to have an account, the transfers are repudiable, and the security relies on the secrecy of the password used in the OPAQUE registration.
 
 ### Link Transfer Creation
+
+The link transfer creation process involves encrypting the filename and file chunks using keys derived from the OPAQUE registration, and storing the encrypted data on the server. The server stores the metadata of the transfer and returns the upload-URLs to the client for uploading the encrypted file chunks.
 
 To create a link transfer, the client performs the following steps:
 
@@ -95,6 +130,8 @@ To create a link transfer, the client performs the following steps:
 > Note: As the `header` is included in the authenticated data of the filename encryption, any modification or swapping of chunks will be detected as the integrity verification of the chunks will fail.
 
 ### Link Transfer Access
+
+The link transfer access process allows the recipient of the link to access the file by performing an OPAQUE login with the transfer ID as the username. The security of the access relies on the secrecy of the password used in the OPAQUE login, which is required to derive the keys for decrypting the filename and file chunks.
 
 To access a link transfer, the client performs the following steps:
 
@@ -139,6 +176,24 @@ The following nonces are used in link transfer:
 
 As a new key is generated for each new link transfer, there is no risk of nonce reuse across different transfers. For the chunk encryption within the same transfer, the `header` is used as the nonce, and rekeying is automatically performed by Libsodium if the counter exceeds the limit.
 
+### Data Storage
+
+The following data are stored **unencrypted** in the server for each link transfer:
+
+- ID of the transfer
+- The nonce of the encrypted filename
+- Header of the transfer
+- Max download times of the transfer
+- Lifetime of the transfer
+- Transfer creation time
+- The file size of the transfer
+- The chunk size of the transfer
+
+The following data are stored **encrypted** in the server for each link transfer:
+
+- The encrypted filename
+- The file chunks
+
 ---
 
 ## Account Transfer
@@ -146,6 +201,8 @@ As a new key is generated for each new link transfer, there is no risk of nonce 
 The account transfer allows a user to send files to other users. The transfer is non-repudiable as the sender signs the transfer. The security of the transfer relies on the security of the account, which avoids requiring one password per transfer and allows users to manage their transfers and keys in one place.
 
 ### Account Creation
+
+The account creation process involves creating an account with a username and password, which is used for authentication and key management in account transfer. The client performs an OPAQUE registration with the server to create the account, and the server stores the account information and keys in encrypted form to ensure the confidentiality and integrity of the account data.
 
 To create an account, the client performs the following steps:
 
@@ -218,7 +275,44 @@ $$
 
 As this limit is extremely large and practically unreachable, we can safely assume that nonce reuse will not occur in account transfer under normal usage.
 
+### Data Storage
+
+For each account, the server stores the following data:
+
+- Username
+- Email
+- An array of keys, where each key contains the following data:
+  - ID of the key
+  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in account transfer.
+  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in account transfer.
+  - If the key is active or not
+  - The time of the key creation
+  - The time of the key revocation (if the key is revoked)
+
+For each account transfer, the server stores the following data **unencrypted**:
+
+- ID of the transfer
+- Sender's username
+- Sender's key ID, which is used to reference the sender's public signing key
+- Recipient's username
+- Recipient's key ID, which is used to reference the recipient's keys
+- The nonce of the encrypted filename
+- The file ID of the transfer
+- The max download times of the transfer
+- The lifetime of the transfer
+- The transfer creation time
+- The current download times of the transfer
+- The file size of the transfer
+- The chunk size of the transfer
+
+The server also stores the following data **encrypted** for each account transfer:
+
+- The encrypted filename
+- The file chunks
+
 ### Account Transfer Creation
+
+The account transfer creation process involves encrypting the filename and file chunks using the recipient's public encryption key and signing the transfer using the sender's private signing key to ensure the authenticity and integrity of the transfer. The server stores the metadata of the transfer and returns the upload-URLs to the client for uploading the encrypted file chunks.
 
 To create an account transfer, the client performs the following steps:
 
@@ -263,6 +357,8 @@ To create an account transfer, the client performs the following steps:
 
 ### Account Transfer Access
 
+The account transfer access process is similar to the link transfer access process, with additional steps for signature verification to ensure the authenticity and integrity of the transfer.
+
 To access an account transfer, the client performs the following steps:
 
 1. The client requests its received transfers from the server, and the server returns the metadata of the transfers, which includes the following data:
@@ -300,6 +396,8 @@ To access an account transfer, the client performs the following steps:
 
 ### Account Change Password
 
+The account change password allows the user to change the password of their account. As the keys of the account are encrypted using the `key_enc` derived from the password, changing the password also involves re-encrypting the private keys with a new `key_enc` derived from the new password. The server updates the password file and the keys if the OPAQUE registration with the new password is successful and the user is authenticated with a valid cookie.
+
 To change the password of an account, the client performs the following steps:
 
 1. The client initiates an OPAQUE registration with the server using the new password. The private keys are encrypted using the new `key_enc` derived from the new password (and new `export_key`), and the client sends the following data to the server at the end of the OPAQUE registration:
@@ -313,13 +411,19 @@ To change the password of an account, the client performs the following steps:
 
 ### Account Key Rotation
 
+The key rotation allows the user to rotate the keys of an account, which provides forward secrecy and backward secrecy for the set of transfers encrypted with the old keys. The new keys are generated by the client and sent to the server, which adds the new keys to the account and marks the old keys as revoked. The old keys are deleted if they are revoked and not used in any other transfer, which ensures that old transfers can still be accessed with the old keys, even after the key rotation.
+
 To rotate the keys of an account, the client performs the following steps:
 
 1. The client generates two new key pairs for encryption and signing. The client encrypts both private keys using the `key_enc`. The new keys and nonces are randomly generated.
 2. The client sends the new keys to the server, which adds the new keys to the account and marks the old keys as revoked. The server also stores the time of the key revocation.
 3. The server deletes the old keys if they are revoked and not used in any other transfer.
 
+> Note: Key rotation does not need to be performed frequently as the maximum number of messages that can be securely encrypted with the same key and randomly generated nonce is extremely large. However, if the user suspects that their keys may be compromised, they can perform a key rotation to ensure the security of their new transfers.
+
 ### Account Recovery
+
+The account recovery allows the user to recover access to their account if they forget their password. The recovery process involves sending a recovery email to the user's registered email address, which contains a recovery link with a unique token. The user can then click on the recovery link to reset their password and regain access to their account. As the password is lost, the keys of the account are considered lost as well, so all existing keys and transfers are deleted to ensure consistency of the account state. The process of creating new keys are automatically performed by the client when resetting the password.
 
 To recover an account, the client performs the following steps:
 
@@ -331,6 +435,8 @@ To recover an account, the client performs the following steps:
 6. The server deletes all other keys and transfers associated with the account, as it is assumed that the password is lost, so the client will not be able to decrypt them anymore.
 
 ### Account Deletion
+
+The account deletion allows the user to permanently delete their account and all associated data from the server. This includes the user information, keys, sent and received transfers, and any other related data. The account deletion process is irreversible, and once an account is deleted, it cannot be recovered.
 
 To delete an account, the client performs the following steps:
 
