@@ -7,21 +7,21 @@ This page describes the security design of JustTransfer, which aims to provide a
 - [Threat Model](#threat-model)
 - [Security Level](#security-level)
 - [Cryptographic Primitives](#cryptographic-primitives)
-- [Link Transfer vs Account Transfer](#link-transfer-vs-account-transfer)
+- [Link Transfer vs Direct Transfer](#link-transfer-vs-direct-transfer)
 - [Link Transfer](#link-transfer)
   - [Link Transfer Creation](#link-transfer-creation)
   - [Link Transfer Access](#link-transfer-access)
   - [Key Management](#key-management)
   - [Nonce Management](#nonce-management)
   - [Data Storage](#data-storage)
-- [Account Transfer](#account-transfer)
+- [Direct Transfer](#direct-transfer)
   - [Account Creation](#account-creation)
   - [Account Login](#account-login)
   - [Key Management](#key-management-1)
   - [Nonce Management](#nonce-management-1)
   - [Data Storage](#data-storage-1)
-  - [Account Transfer Creation](#account-transfer-creation)
-  - [Account Transfer Access](#account-transfer-access)
+  - [Direct Transfer Creation](#direct-transfer-creation)
+  - [Direct Transfer Access](#direct-transfer-access)
   - [Account Change Password](#account-change-password)
   - [Account Key Rotation](#account-key-rotation)
   - [Account Recovery](#account-recovery)
@@ -68,12 +68,12 @@ The following cryptographic primitives are used in Link Transfer:
   - Key size: 256 bits
   - Header size (nonce): 192 bits
 
-The following cryptographic primitives are used in Account Transfer:
+The following cryptographic primitives are used in Direct Transfer:
 
 - `XSalsa20-Poly1305`: A stream cipher combined with a MAC for authenticated encryption, used to encrypt the private keys of an account.
   - Key size: 256 bits
   - Nonce size: 192 bits
-- `X25519`, `XSalsa20` and `Poly1305`: A suite of cryptographic algorithms used to provide hybrid encryption, used to encrypt filename and file chunks in account transfer.
+- `X25519`, `XSalsa20` and `Poly1305`: A suite of cryptographic algorithms used to provide hybrid encryption, used to encrypt filename and file chunks in direct transfer.
   - Public key size: 256 bits
   - Private key size: 256 bits
   - Nonce size: 192 bits
@@ -83,11 +83,11 @@ The following cryptographic primitives are used in Account Transfer:
 
 ---
 
-### Link Transfer vs Account Transfer
+### Link Transfer vs Direct Transfer
 
-The following table summarizes the differences between link transfer and account transfer in JustTransfer:
+The following table summarizes the differences between link transfer and direct transfer in JustTransfer:
 
-| Feature          | Link Transfer                            | Account Transfer                                                  |
+| Feature          | Link Transfer                            | Direct Transfer                                                   |
 | ---------------- | ---------------------------------------- | ----------------------------------------------------------------- |
 | Authentication   | One password for each transfer           | One password for the account, which can manage multiple transfers |
 | Repudiation      | Yes                                      | No (transfers are signed by the sender)                           |
@@ -103,7 +103,7 @@ The link transfer allows a user to share a file with other users by creating a l
 
 ### Link Transfer Creation
 
-The link transfer creation process involves encrypting the filename and file chunks using keys derived from the OPAQUE registration, and storing the encrypted data on the server. The server stores the metadata of the transfer and returns the upload-URLs to the client for uploading the encrypted file chunks.
+The link transfer creation process involves encrypting the filename and file chunks using keys derived from the OPAQUE registration and storing the encrypted data on the server. The server stores the metadata of the transfer and returns the upload-URLs to the client for uploading the encrypted file chunks.
 
 To create a link transfer, the client performs the following steps:
 
@@ -153,7 +153,7 @@ To access a link transfer, the client performs the following steps:
 
 5. The client decrypts the filename using AEGIS-256 with `key_metadata` and `nonce_filename`. It then verifies the integrity of the metadata using the authenticated data.
 6. The client requests the download URLs from the server, which returns pre-signed URLs for downloading the file in chunks.
-7. The client downloads the encrypted chunks using the download URLs, and decrypts each chunk using XChacha20-Poly1305 with `key_file` and `header` as the nonce.
+7. The client downloads the encrypted chunks using the download URLs and decrypts each chunk using XChacha20-Poly1305 with `key_file` and `header` as the nonce.
 8. The client verifies the integrity of each chunk using the MAC provided by XChacha20-Poly1305.
 9. The client reconstructs the file from the decrypted chunks and provides it to the user.
 
@@ -165,7 +165,7 @@ The keys used in link transfers are obtained as follows:
 2. `key_metadata` is obtained using the first 256 bits of the `export_key`
 3. `key_file` is obtained using the last 256 bits of the `export_key`
 
-As the `export_key` is derived from the password (which never leaves the client device), the server can never access the keys, which ensures the confidentiality and integrity of the files in link transfer.
+As the `export_key` is derived from the password (which never leaves the client's device), the server can never access the keys, which ensures the confidentiality and integrity of the files in link transfer.
 
 ### Nonce Management
 
@@ -174,7 +174,7 @@ The following nonces are used in link transfer:
 - `nonce_filename`: A 192-bit nonce generated randomly for encrypting the filename.
 - `header`: A 192-bit nonce generated randomly for encrypting each chunk of the file.
 
-As a new key is generated for each new link transfer, there is no risk of nonce reuse across different transfers. For the chunk encryption within the same transfer, the `header` is used as the nonce, and rekeying is automatically performed by Libsodium if the counter exceeds the limit.
+As a new key is generated for each new link transfer, there is no risk of nonce reuse across different transfers. For the chunk encryption within the same transfer, the `header` is used as the nonce, and rekeying is automatically performed by `Libsodium` if the counter exceeds the limit.
 
 ### Data Storage
 
@@ -196,25 +196,25 @@ The following data are stored **encrypted** in the server for each link transfer
 
 ---
 
-## Account Transfer
+## Direct Transfer
 
-The account transfer allows a user to send files to other users. The transfer is non-repudiable as the sender signs the transfer. The security of the transfer relies on the security of the account, which avoids requiring one password per transfer and allows users to manage their transfers and keys in one place.
+Direct transfer allows a user to send files to other users. The transfer is non-repudiable as the sender signs the transfer. The security of the transfer relies on the security of the account, which avoids requiring one password per transfer and allows users to manage their transfers and keys in one place.
 
 ### Account Creation
 
-The account creation process involves creating an account with a username and password, which is used for authentication and key management in account transfer. The client performs an OPAQUE registration with the server to create the account, and the server stores the account information and keys in encrypted form to ensure the confidentiality and integrity of the account data.
+The account creation process involves creating an account with a username and password, which is used for authentication and key management in direct transfer. The client performs an OPAQUE registration with the server to create the account, and the server stores the account information and keys in encrypted form to ensure the confidentiality and integrity of the account data.
 
 To create an account, the client performs the following steps:
 
 1. The client performs an OPAQUE registration with the server.
 2. The client derives the `key_enc` using the first 256 bits of the `export_key` obtained from the OPAQUE registration.
-3. The client generates two key pairs for encryption and signing, which are used for encrypting the file and signing the transfer in account transfer.
+3. The client generates two key pairs for encryption and signing, which are used for encrypting the file and signing the transfer in direct transfer.
 4. The client encrypts the private keys of the key pairs (`enc_private_key` and `sign_private_key`) using `key_enc`, with `enc_nonce_private_key` and `sign_nonce_private_key` as the nonces (random), respectively using XSalsa20-Poly1305. This generates the `enc_cipher_private_key` and `sign_cipher_private_key`.
 5. The client sends the following data to the server at the end of the OPAQUE registration:
    - Username
    - Email
-   - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in account transfer.
-   - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in account transfer.
+   - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in direct transfer.
+   - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in direct transfer.
 
 ### Account Login
 
@@ -223,28 +223,28 @@ The account login process is the same as the OPAQUE login process, which produce
 - Role of the user (e.g., user, premium, etc.)
 - An array of keys, where each key contains the following data:
   - ID of the key
-  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in account transfer.
-  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in account transfer.
+  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in direct transfer.
+  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in direct transfer.
   - If the key is active or not
   - The time of the key creation
   - The time of the key revocation (if the key is revoked)
 - Cookie which is used for authentication of the future requests to the server.
 
-The client can then decrypt the private keys using the `export_key` and the nonces and use the key pairs for account transfer operations.
+The client can then decrypt the private keys using the `export_key` and the nonces and use the key pairs for direct transfer operations.
 
 ### Key Management
 
-The keys used in account transfers are obtained as follows:
+The keys used in direct transfers are obtained as follows:
 
 1. The `export_key` is obtained from a successful OPAQUE registration or login, which is a 512-bit key.
 2. `key_enc` is obtained using the first 256 bits of the `export_key` and is used to encrypt the private key.
-3. The encryption and signing key pairs are generated by the client, and stored in the server in encrypted form for the private keys.
+3. The encryption and signing key pairs are generated by the client and stored in the server in encrypted form for the private keys.
 
-As the private keys are encrypted using the `key_enc` derived from the password (which never leaves the client device), the server can never access the private keys, which ensures the confidentiality and integrity of the files in account transfer.
+As the private keys are encrypted using the `key_enc` derived from the password (which never leaves the client's device), the server can never access the private keys, which ensures the confidentiality and integrity of the files in direct transfer.
 
 ### Nonce Management
 
-The following nonces are used in account transfer:
+The following nonces are used in direct transfer:
 
 - `nonce_priv_enc`: A 192-bit nonce generated randomly for encrypting the encryption private key.
 - `nonce_priv_sign`: A 192-bit nonce generated randomly for encrypting the signing private key.
@@ -273,7 +273,7 @@ $$
 sizeLimit = 2^{80} \times chunkSize \approx 1.2 \times 10^{22} \text{ GB}
 $$
 
-As this limit is extremely large and practically unreachable, we can safely assume that nonce reuse will not occur in account transfer under normal usage.
+As this limit is extremely large and practically unreachable, we can safely assume that nonce reuse will not occur in direct transfer under normal usage.
 
 ### Data Storage
 
@@ -283,8 +283,8 @@ For each account, the server stores the following data:
 - Email
 - An array of keys, where each key contains the following data:
   - ID of the key
-  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in account transfer.
-  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in account transfer.
+  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in direct transfer.
+  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in direct transfer.
   - If the key is active or not
   - The time of the key creation
   - The time of the key revocation (if the key is revoked)
@@ -305,16 +305,16 @@ For each account transfer, the server stores the following data **unencrypted**:
 - The file size of the transfer
 - The chunk size of the transfer
 
-The server also stores the following data **encrypted** for each account transfer:
+The server also stores the following data **encrypted** for each direct transfer:
 
 - The encrypted filename
 - The file chunks
 
-### Account Transfer Creation
+### Direct Transfer Creation
 
-The account transfer creation process involves encrypting the filename and file chunks using the recipient's public encryption key and signing the transfer using the sender's private signing key to ensure the authenticity and integrity of the transfer. The server stores the metadata of the transfer and returns the upload-URLs to the client for uploading the encrypted file chunks.
+The direct transfer creation process involves encrypting the filename and file chunks using the recipient's public encryption key and signing the transfer using the sender's private signing key to ensure the authenticity and integrity of the transfer. The server stores the metadata of the transfer and returns the upload-URLs to the client for uploading the encrypted file chunks.
 
-To create an account transfer, the client performs the following steps:
+To create a direct transfer, the client performs the following steps:
 
 1. The client requests the server for the recipient's public keys using the recipient's username.
 2. The client encrypts the filename using the following steps:
@@ -355,11 +355,11 @@ To create an account transfer, the client performs the following steps:
 7. The client uploads the encrypted chunks to the upload-URLs.
 8. The client terminates the transfer by sending the `etags` and the signature of the transfer to the server, which are used to finalize the transfer upload.
 
-### Account Transfer Access
+### Direct Transfer Access
 
-The account transfer access process is similar to the link transfer access process, with additional steps for signature verification to ensure the authenticity and integrity of the transfer.
+The direct transfer access process is similar to the link transfer access process, with additional steps for signature verification to ensure the authenticity and integrity of the transfer.
 
-To access an account transfer, the client performs the following steps:
+To access a direct transfer, the client performs the following steps:
 
 1. The client requests its received transfers from the server, and the server returns the metadata of the transfers, which includes the following data:
 
@@ -396,7 +396,7 @@ To access an account transfer, the client performs the following steps:
 
 ### Account Change Password
 
-The account change password allows the user to change the password of their account. As the keys of the account are encrypted using the `key_enc` derived from the password, changing the password also involves re-encrypting the private keys with a new `key_enc` derived from the new password. The server updates the password file and the keys if the OPAQUE registration with the new password is successful and the user is authenticated with a valid cookie.
+The account change password allows the user to change the password of their account. As the keys of the account are encrypted using the `key_enc` derived from the password, changing the password also involves re-encrypting the private keys with a new `key_enc` derived from the new password. The server updates the password file and the keys if the OPAQUE registration with the new password is successful, and the user is authenticated with a valid cookie.
 
 To change the password of an account, the client performs the following steps:
 
@@ -404,8 +404,8 @@ To change the password of an account, the client performs the following steps:
 
 - An array of keys, where each key contains the following data:
   - ID of the key
-  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in account transfer.
-  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in account transfer.
+  - `enc_cipher_private_key`, `enc_nonce_private_key` and `enc_public_key`, which is a key pair used for encrypting operations in direct transfer.
+  - `sign_cipher_private_key`, `sign_nonce_private_key` and `sign_public_key`, which is a key pair used for signing operations in direct transfer.
 
 2. The server accepts updating the password file and the keys if the OPAQUE registration is successful, and the user is authenticated (valid cookie). The server then updates the password file and the keys with the new data.
 
@@ -419,11 +419,11 @@ To rotate the keys of an account, the client performs the following steps:
 2. The client sends the new keys to the server, which adds the new keys to the account and marks the old keys as revoked. The server also stores the time of the key revocation.
 3. The server deletes the old keys if they are revoked and not used in any other transfer.
 
-> Note: Key rotation does not need to be performed frequently as the maximum number of messages that can be securely encrypted with the same key and randomly generated nonce is extremely large. However, if the user suspects that their keys may be compromised, they can perform a key rotation to ensure the security of their new transfers.
+> Note: Key rotation does not need to be performed frequently as the maximum number of messages that can be securely encrypted with the same key, and a randomly generated nonce is extremely large. However, if the user suspects that their keys may be compromised, they can perform a key rotation to ensure the security of their new transfers.
 
 ### Account Recovery
 
-The account recovery allows the user to recover access to their account if they forget their password. The recovery process involves sending a recovery email to the user's registered email address, which contains a recovery link with a unique token. The user can then click on the recovery link to reset their password and regain access to their account. As the password is lost, the keys of the account are considered lost as well, so all existing keys and transfers are deleted to ensure consistency of the account state. The process of creating new keys are automatically performed by the client when resetting the password.
+The account recovery allows the user to recover access to their account if they forget their password. The recovery process involves sending a recovery email to the user's registered email address, which contains a recovery link with a unique token. The user can then click on the recovery link to reset their password and regain access to their account. As the password is lost, the keys of the account are considered lost as well, so all existing keys and transfers are deleted to ensure consistency of the account's state. The process of creating new keys is automatically performed by the client when resetting the password.
 
 To recover an account, the client performs the following steps:
 
