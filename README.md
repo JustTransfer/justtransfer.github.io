@@ -1,6 +1,6 @@
 # JustTransfer Whitepaper
 
-This page describes the security design of JustTransfer, which aims to provide an end-to-end secure account and link transfer service for large files.
+This page describes the security design of JustTransfer, which aims to provide an end-to-end secure link and direct transfer service for large files.
 
 ## Table of Contents
 
@@ -287,7 +287,7 @@ For each account, the server stores the following data:
   - The time of the key creation
   - The time of the key revocation (if the key is revoked)
 
-For each account transfer, the server stores the following data **unencrypted**:
+For each direct transfer, the server stores the following data **unencrypted**:
 
 - ID of the transfer
 - Sender's username
