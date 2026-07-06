@@ -87,13 +87,11 @@ The following cryptographic primitives are used in Direct Transfer:
 
 The following table summarizes the differences between link transfer and direct transfer in JustTransfer:
 
-| Feature          | Link Transfer                            | Direct Transfer                                                   |
-| ---------------- | ---------------------------------------- | ----------------------------------------------------------------- |
-| Authentication   | One password for each transfer           | One password for the account, which can manage multiple transfers |
-| Repudiation      | Yes                                      | No (transfers are signed by the sender)                           |
-| Forward Secrecy  | Yes                                      | Yes (on key rotation)                                             |
-| Backward Secrecy | Yes                                      | Yes (on key rotation)                                             |
-| Limits           | Limited (size, lifetime, download times) | Higher limits (depends on the account)                            |
+| Feature        | Link Transfer                            | Direct Transfer                                                   |
+| -------------- | ---------------------------------------- | ----------------------------------------------------------------- |
+| Authentication | One password for each transfer           | One password for the account, which can manage multiple transfers |
+| Repudiation    | Yes                                      | No (transfers are signed by the sender)                           |
+| Limits         | Limited (size, lifetime, download times) | Higher limits (depends on the account)                            |
 
 ---
 
